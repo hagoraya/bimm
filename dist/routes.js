@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const axios_1 = __importDefault(require("axios"));
 const xml_js_1 = __importDefault(require("xml-js"));
+const errors_1 = require("./errors");
 const getAllMakesUrl = "https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=XML";
 const getVehicalTypesForMakeIdUrl = "https://vpic.nhtsa.dot.gov/api/vehicles/GetVehicleTypesForMakeId/";
 const router = express_1.default.Router();
@@ -24,32 +25,37 @@ router.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         res.status(200).send(allMakesData);
     }
     catch (error) {
-        res.status(500).send(error.message);
+        res.status(error.statusCode ? error.statusCode : 500).send(error.message);
     }
 }));
 function getAllMakes() {
-    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         const allMakesResp = yield axios_1.default.get(getAllMakesUrl);
-        if (allMakesResp.status === 200) {
-            const data = xml_js_1.default.xml2json(allMakesResp.data, {
-                compact: true,
-            });
-            try {
-                const jsonData = JSON.parse(data);
-                return (_b = (_a = jsonData === null || jsonData === void 0 ? void 0 : jsonData.Response) === null || _a === void 0 ? void 0 : _a.Results) === null || _b === void 0 ? void 0 : _b.AllVehicleMakes;
-            }
-            catch (error) {
-                throw new Error(`Unable to parse JSON data`);
-            }
+        const data = handleApiResponse(allMakesResp);
+        try {
+            const jsonData = JSON.parse(data);
+            return jsonData.Response.Results.AllVehicleMakes;
         }
-        else {
-            throw new Error(`Failed to fetch all makes data. NHTSA Api responded with status: ${allMakesResp.status} `);
+        catch (error) {
+            throw new errors_1.ApiError("Failed to parse data", 500);
         }
     });
 }
 function GetVehiclesForMakeId(makeId) {
-    return __awaiter(this, void 0, void 0, function* () { });
+    return __awaiter(this, void 0, void 0, function* () {
+        const allMakesResp = yield axios_1.default.get(getAllMakesUrl);
+    });
+}
+function handleApiResponse(response) {
+    if (response.status === 200) {
+        const data = xml_js_1.default.xml2json(response.data, {
+            compact: true,
+        });
+        return data;
+    }
+    else {
+        throw new errors_1.ApiError(`Failed to fetch data. NHTSA API responded with status: ${response.status}`, 500);
+    }
 }
 exports.default = router;
 //# sourceMappingURL=routes.js.map
