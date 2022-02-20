@@ -1,40 +1,38 @@
-import express from "express";
-import routes from "./routes";
-import { createClient } from "redis";
-
+import express from 'express';
+import routes from './routes';
+import * as redis from 'redis';
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 4000;
+const REDIS_URL = process.env.REDIS_url || 'redis://redis-cache:6379';
 
+console.log(REDIS_URL);
 //Start Redis Connection
 
-// let redisClient = null;
-// const initRedisClient = async () => {
-//   redisClient = createClient();
-//   redisClient.on("error", (err) => {
-//     console.log("Redis Client Error", err);
-//   });
-//   await redisClient.connect();
-// };
-
-// (async () => {
-//   initRedisClient();
-// })();
+let redisClient = null;
+const initRedisClient = async () => {
+  redisClient = redis.createClient({ url: REDIS_URL });
+  redisClient.on('error', (err) => {
+    console.log('Redis Client Error', err);
+  });
+  await redisClient.connect();
+};
 
 (async () => {
-  const client = createClient();
-
-  client.on("error", (err) => console.log("Redis Client Error", err));
-
-  await client.connect();
-
-  await client.set("key", "value");
-  const value = await client.get("key");
+  initRedisClient();
 })();
 
 //Start Express Server
-app.use("/api", routes);
+app.use('/api', routes);
 app.listen(PORT, () => {
   return console.log(`Server Started at http://localhost:${PORT}`);
 });
 
-// export default redisClient;
+export default redisClient;
+
+// (async () => {
+//   // const client = redis.createClient({ url: process.env.REDIS_URL });
+//   // client.on('error', (err) => console.log('Redis Client Error', err));
+
+//   // await client.connect();
+
+// })();

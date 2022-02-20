@@ -15,14 +15,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const axios_1 = __importDefault(require("axios"));
 const xml_js_1 = __importDefault(require("xml-js"));
+const app_1 = __importDefault(require("./app"));
 const errors_1 = require("./errors");
-const AllMakesUrl = "https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=XML";
-const VehicalTypesForMakeIdBaseUrl = "https://vpic.nhtsa.dot.gov/api/vehicles/GetVehicleTypesForMakeId/";
+const AllMakesUrl = 'https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=XML';
+const VehicalTypesForMakeIdBaseUrl = 'https://vpic.nhtsa.dot.gov/api/vehicles/GetVehicleTypesForMakeId/';
 const router = express_1.default.Router();
-router.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const allMakesData = yield getAllMakes();
         const allVehiclasTypes = yield GetVehiclesForMakeId(allMakesData[0].Make_ID._text);
+        yield app_1.default.set('key', 'value');
+        const value = yield app_1.default.get('key');
+        console.log(value);
         res.status(200).send(allVehiclasTypes);
     }
     catch (error) {
@@ -38,7 +42,7 @@ function getAllMakes() {
             return jsonData.Response.Results.AllVehicleMakes;
         }
         catch (error) {
-            throw new errors_1.ApiError("Failed to parse response data", 500);
+            throw new errors_1.ApiError('Failed to parse response data', 500);
         }
     });
 }
@@ -52,7 +56,7 @@ function GetVehiclesForMakeId(makeId) {
             return jsonData.Response.Results.VehicleTypesForMakeIds;
         }
         catch (error) {
-            throw new errors_1.ApiError("Failed to parse response data", 500);
+            throw new errors_1.ApiError('Failed to parse response data', 500);
         }
     });
 }

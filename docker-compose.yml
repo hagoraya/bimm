@@ -1,0 +1,22 @@
+version: '3.7'
+
+services:
+  redis-server:
+    image: 'redis'
+    container_name: redis-cache
+    ports:
+      - 6379:6379
+  server:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      target: base
+    volumes:
+      - .:/usr/app
+    container_name: bimm-server
+    environment:
+      - REDI_URL=redis://redis-cache
+      - PORT=4000
+    ports:
+      - '4000:4000'
+    command: npm run start

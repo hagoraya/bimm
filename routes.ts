@@ -1,24 +1,41 @@
-import express from "express";
-import axios, { AxiosResponse } from "axios";
-import xml2js from "xml-js";
+import express from 'express';
+import axios, { AxiosResponse } from 'axios';
+import xml2js from 'xml-js';
+import redisClient from './app';
 
-import { ApiError } from "./errors";
-import { AllMakesResponse, VehicleTypesForMakeIdsResp } from "./types";
+import { ApiError } from './errors';
+import {
+  AllMakesResponse,
+  VehicleTypesForMakeIdsResp,
+  MakeAndVehicle,
+  MakeIdModal,
+} from './types';
 
 const AllMakesUrl =
-  "https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=XML";
+  'https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=XML';
 const VehicalTypesForMakeIdBaseUrl =
-  "https://vpic.nhtsa.dot.gov/api/vehicles/GetVehicleTypesForMakeId/";
+  'https://vpic.nhtsa.dot.gov/api/vehicles/GetVehicleTypesForMakeId/';
 
 const router = express.Router();
 
-router.get("/", async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const allMakesData = await getAllMakes();
+    const allMakesNormalized = allMakesData.map((make: MakeIdModal) => {
+      return {
+        makeId: make.Make_ID._text,
+        makeName: make.Make_Name._text,
+      };
+    });
 
     const allVehiclasTypes = await GetVehiclesForMakeId(
       allMakesData[0].Make_ID._text
     );
+
+    await redisClient.set('key', 'value');
+    const value = await redisClient.get('key');
+
+    console.log(value);
 
     res.status(200).send(allVehiclasTypes);
   } catch (error) {
@@ -34,7 +51,7 @@ async function getAllMakes(): Promise<AllMakesResponse> {
     const jsonData = JSON.parse(data);
     return jsonData.Response.Results.AllVehicleMakes;
   } catch (error) {
-    throw new ApiError("Failed to parse response data", 500);
+    throw new ApiError('Failed to parse response data', 500);
   }
 }
 
@@ -49,7 +66,7 @@ async function GetVehiclesForMakeId(
     const jsonData = JSON.parse(data);
     return jsonData.Response.Results.VehicleTypesForMakeIds;
   } catch (error) {
-    throw new ApiError("Failed to parse response data", 500);
+    throw new ApiError('Failed to parse response data', 500);
   }
 }
 

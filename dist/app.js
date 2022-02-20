@@ -1,4 +1,23 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -14,32 +33,32 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const routes_1 = __importDefault(require("./routes"));
-const redis_1 = require("redis");
+const redis = __importStar(require("redis"));
 const app = (0, express_1.default)();
-const PORT = 3000;
+const PORT = process.env.PORT || 4000;
+const REDIS_URL = process.env.REDIS_url || 'redis://redis-cache:6379';
+console.log(REDIS_URL);
 //Start Redis Connection
-// let redisClient = null;
-// const initRedisClient = async () => {
-//   redisClient = createClient();
-//   redisClient.on("error", (err) => {
-//     console.log("Redis Client Error", err);
-//   });
-//   await redisClient.connect();
-// };
-// (async () => {
-//   initRedisClient();
-// })();
+let redisClient = null;
+const initRedisClient = () => __awaiter(void 0, void 0, void 0, function* () {
+    redisClient = redis.createClient({ url: REDIS_URL });
+    redisClient.on('error', (err) => {
+        console.log('Redis Client Error', err);
+    });
+    yield redisClient.connect();
+});
 (() => __awaiter(void 0, void 0, void 0, function* () {
-    const client = (0, redis_1.createClient)();
-    client.on("error", (err) => console.log("Redis Client Error", err));
-    yield client.connect();
-    yield client.set("key", "value");
-    const value = yield client.get("key");
+    initRedisClient();
 }))();
 //Start Express Server
-app.use("/api", routes_1.default);
+app.use('/api', routes_1.default);
 app.listen(PORT, () => {
     return console.log(`Server Started at http://localhost:${PORT}`);
 });
-// export default redisClient;
+exports.default = redisClient;
+// (async () => {
+//   // const client = redis.createClient({ url: process.env.REDIS_URL });
+//   // client.on('error', (err) => console.log('Redis Client Error', err));
+//   // await client.connect();
+// })();
 //# sourceMappingURL=app.js.map

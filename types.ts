@@ -20,4 +20,20 @@ type VehicleTypeResp = {
   };
 };
 
-export { AllMakesResponse, VehicleTypesForMakeIdsResp };
+type MakeAndVehicle = {
+  makeId: string;
+  makeName: string;
+  vehicleTypes: [vehicleType];
+};
+
+type vehicleType = {
+  typeId: string;
+  typeName: string;
+};
+
+export {
+  AllMakesResponse,
+  VehicleTypesForMakeIdsResp,
+  MakeAndVehicle,
+  MakeIdModal,
+};
