@@ -23,7 +23,7 @@ type VehicleTypeResp = {
 type MakeAndVehicle = {
   makeId: string;
   makeName: string;
-  vehicleTypes: [vehicleType];
+  vehicleTypes: [] | [vehicleType];
 };
 
 type vehicleType = {

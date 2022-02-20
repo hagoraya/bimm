@@ -24,7 +24,6 @@ router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         //Check if Makes data exists in redis
         let cachedData = yield app_1.default.LRANGE('VehicalData', 0, -1);
-        console.log('cachedData', cachedData);
         if (cachedData.length) {
             const jsonData = cachedData.map((data) => {
                 const obj = JSON.parse(data);
@@ -36,10 +35,12 @@ router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         }
         const allMakesData = yield getAllMakes();
         let normalizedMakesData = allMakesData.map((make) => {
-            return {
+            const make_vehicale = {
                 makeId: make.Make_ID._text,
                 makeName: make.Make_Name._text,
+                vehicleTypes: [],
             };
+            return make_vehicale;
         });
         console.log('Size of all Makes: ', normalizedMakesData.length);
         const promises = [];
@@ -48,7 +49,6 @@ router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             promises.push(make.makeId);
             redisData.push(JSON.stringify({ [make.makeId]: make }));
         });
-        console.log(redisData);
         yield app_1.default.RPUSH('VehicalData', redisData);
         const dataInRedis = yield app_1.default.LRANGE('VehicalData', 0, -1);
         const jsonData = dataInRedis.map((data) => {

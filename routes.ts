@@ -22,7 +22,6 @@ router.get('/', async (req, res) => {
   try {
     //Check if Makes data exists in redis
     let cachedData = await redisClient.LRANGE('VehicalData', 0, -1);
-    console.log('cachedData', cachedData);
     if (cachedData.length) {
       const jsonData = cachedData.map((data) => {
         const obj = JSON.parse(data);
@@ -36,10 +35,12 @@ router.get('/', async (req, res) => {
     const allMakesData = await getAllMakes();
 
     let normalizedMakesData = allMakesData.map((make: MakeIdModal) => {
-      return {
+      const make_vehicale: MakeAndVehicle = {
         makeId: make.Make_ID._text,
         makeName: make.Make_Name._text,
+        vehicleTypes: [],
       };
+      return make_vehicale;
     });
 
     console.log('Size of all Makes: ', normalizedMakesData.length);
@@ -51,7 +52,6 @@ router.get('/', async (req, res) => {
       promises.push(make.makeId);
       redisData.push(JSON.stringify({ [make.makeId]: make }));
     });
-    console.log(redisData);
     await redisClient.RPUSH('VehicalData', redisData);
 
     const dataInRedis = await redisClient.LRANGE('VehicalData', 0, -1);
