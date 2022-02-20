@@ -16,13 +16,14 @@ const express_1 = __importDefault(require("express"));
 const axios_1 = __importDefault(require("axios"));
 const xml_js_1 = __importDefault(require("xml-js"));
 const errors_1 = require("./errors");
-const getAllMakesUrl = "https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=XML";
-const getVehicalTypesForMakeIdUrl = "https://vpic.nhtsa.dot.gov/api/vehicles/GetVehicleTypesForMakeId/";
+const AllMakesUrl = "https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=XML";
+const VehicalTypesForMakeIdBaseUrl = "https://vpic.nhtsa.dot.gov/api/vehicles/GetVehicleTypesForMakeId/";
 const router = express_1.default.Router();
 router.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const allMakesData = yield getAllMakes();
-        res.status(200).send(allMakesData);
+        const allVehiclasTypes = yield GetVehiclesForMakeId(allMakesData[0].Make_ID._text);
+        res.status(200).send(allVehiclasTypes);
     }
     catch (error) {
         res.status(error.statusCode ? error.statusCode : 500).send(error.message);
@@ -30,20 +31,29 @@ router.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 }));
 function getAllMakes() {
     return __awaiter(this, void 0, void 0, function* () {
-        const allMakesResp = yield axios_1.default.get(getAllMakesUrl);
+        const allMakesResp = yield axios_1.default.get(AllMakesUrl);
         const data = handleApiResponse(allMakesResp);
         try {
             const jsonData = JSON.parse(data);
             return jsonData.Response.Results.AllVehicleMakes;
         }
         catch (error) {
-            throw new errors_1.ApiError("Failed to parse data", 500);
+            throw new errors_1.ApiError("Failed to parse response data", 500);
         }
     });
 }
 function GetVehiclesForMakeId(makeId) {
     return __awaiter(this, void 0, void 0, function* () {
-        const allMakesResp = yield axios_1.default.get(getAllMakesUrl);
+        const getVehiclesFromMakeIdUrl = `${VehicalTypesForMakeIdBaseUrl}/${makeId}?format=xml`;
+        const getVehiclesResp = yield axios_1.default.get(getVehiclesFromMakeIdUrl);
+        const data = handleApiResponse(getVehiclesResp);
+        try {
+            const jsonData = JSON.parse(data);
+            return jsonData.Response.Results.VehicleTypesForMakeIds;
+        }
+        catch (error) {
+            throw new errors_1.ApiError("Failed to parse response data", 500);
+        }
     });
 }
 function handleApiResponse(response) {
