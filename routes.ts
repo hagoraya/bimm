@@ -14,32 +14,48 @@ import {
 const AllMakesUrl =
   'https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=XML';
 const VehicalTypesForMakeIdBaseUrl =
-  'https://vpic.nhtsa.dot.gov/api/vehicles/GetVehicleTypesForMakeId/';
+  'https://vpic.nhtsa.dot.gov/api/vehicles/GetVehicleTypesForMakeId';
 
 const router = express.Router();
 
 router.get('/', async (req, res) => {
   try {
+    //Check if Makes data exists in redis
+    let cachedData = await redisClient.LRANGE('VehicalData', 0, -1);
+    console.log('cachedData', cachedData);
+    if (cachedData.length > 0) {
+      res.status(200).send(cachedData);
+
+      return;
+    }
+
     const allMakesData = await getAllMakes();
-    const allMakesNormalized = allMakesData.map((make: MakeIdModal) => {
+
+    let normalizedMakesData = allMakesData.map((make: MakeIdModal) => {
       return {
         makeId: make.Make_ID._text,
         makeName: make.Make_Name._text,
       };
     });
 
-    const allVehiclasTypes = await GetVehiclesForMakeId(
-      allMakesData[0].Make_ID._text
-    );
+    console.log('Size of all Makes: ', normalizedMakesData.length);
 
-    await redisClient.set('key', 'value');
-    const value = await redisClient.get('key');
+    const promises = [];
 
-    console.log(value);
+    let redisData = [];
+    normalizedMakesData.forEach((make) => {
+      promises.push(make.makeId);
+      redisData.push(JSON.stringify({ [make.makeId]: make }));
+    });
+    console.log(redisData);
+    await redisClient.RPUSH('VehicalData', redisData);
 
-    res.status(200).send(allVehiclasTypes);
+    const dataInRedis = await redisClient.LRANGE('VehicalData', 0, -1);
+    //const allVehiclasTypes = await Promise.all(promises);
+    res.status(200).send(dataInRedis);
   } catch (error) {
-    res.status(error.statusCode ? error.statusCode : 500).send(error.message);
+    console.log('Error: ', error);
+    res.status(error.statusCode).send(error.message);
   }
 });
 
@@ -58,6 +74,7 @@ async function getAllMakes(): Promise<AllMakesResponse> {
 async function GetVehiclesForMakeId(
   makeId: String
 ): Promise<VehicleTypesForMakeIdsResp> {
+  console.log('Getting data for: ', makeId);
   const getVehiclesFromMakeIdUrl = `${VehicalTypesForMakeIdBaseUrl}/${makeId}?format=xml`;
   const getVehiclesResp = await axios.get(getVehiclesFromMakeIdUrl);
   const data = handleApiResponse(getVehiclesResp);
@@ -78,7 +95,7 @@ function handleApiResponse(response: AxiosResponse) {
     return data;
   } else {
     throw new ApiError(
-      `Failed to fetch data. NHTSA API responded with status: ${response.status}`,
+      `Failed to fetch data. NHTSA API responded with: ${response}`,
       500
     );
   }

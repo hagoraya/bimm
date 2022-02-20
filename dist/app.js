@@ -56,9 +56,4 @@ app.listen(PORT, () => {
     return console.log(`Server Started at http://localhost:${PORT}`);
 });
 exports.default = redisClient;
-// (async () => {
-//   // const client = redis.createClient({ url: process.env.REDIS_URL });
-//   // client.on('error', (err) => console.log('Redis Client Error', err));
-//   // await client.connect();
-// })();
 //# sourceMappingURL=app.js.map

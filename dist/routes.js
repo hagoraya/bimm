@@ -18,19 +18,40 @@ const xml_js_1 = __importDefault(require("xml-js"));
 const app_1 = __importDefault(require("./app"));
 const errors_1 = require("./errors");
 const AllMakesUrl = 'https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=XML';
-const VehicalTypesForMakeIdBaseUrl = 'https://vpic.nhtsa.dot.gov/api/vehicles/GetVehicleTypesForMakeId/';
+const VehicalTypesForMakeIdBaseUrl = 'https://vpic.nhtsa.dot.gov/api/vehicles/GetVehicleTypesForMakeId';
 const router = express_1.default.Router();
 router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        //Check if Makes data exists in redis
+        let cachedData = yield app_1.default.LRANGE('VehicalData', 0, -1);
+        console.log('cachedData', cachedData);
+        if (cachedData.length > 0) {
+            res.status(200).send(cachedData);
+            return;
+        }
         const allMakesData = yield getAllMakes();
-        const allVehiclasTypes = yield GetVehiclesForMakeId(allMakesData[0].Make_ID._text);
-        yield app_1.default.set('key', 'value');
-        const value = yield app_1.default.get('key');
-        console.log(value);
-        res.status(200).send(allVehiclasTypes);
+        let normalizedMakesData = allMakesData.map((make) => {
+            return {
+                makeId: make.Make_ID._text,
+                makeName: make.Make_Name._text,
+            };
+        });
+        console.log('Size of all Makes: ', normalizedMakesData.length);
+        const promises = [];
+        let redisData = [];
+        normalizedMakesData.forEach((make) => {
+            promises.push(make.makeId);
+            redisData.push(JSON.stringify({ [make.makeId]: make }));
+        });
+        console.log(redisData);
+        yield app_1.default.RPUSH('VehicalData', redisData);
+        const dataInRedis = yield app_1.default.LRANGE('VehicalData', 0, -1);
+        //const allVehiclasTypes = await Promise.all(promises);
+        res.status(200).send(dataInRedis);
     }
     catch (error) {
-        res.status(error.statusCode ? error.statusCode : 500).send(error.message);
+        console.log('Error: ', error);
+        res.status(error.statusCode).send(error.message);
     }
 }));
 function getAllMakes() {
@@ -48,6 +69,7 @@ function getAllMakes() {
 }
 function GetVehiclesForMakeId(makeId) {
     return __awaiter(this, void 0, void 0, function* () {
+        console.log('Getting data for: ', makeId);
         const getVehiclesFromMakeIdUrl = `${VehicalTypesForMakeIdBaseUrl}/${makeId}?format=xml`;
         const getVehiclesResp = yield axios_1.default.get(getVehiclesFromMakeIdUrl);
         const data = handleApiResponse(getVehiclesResp);
@@ -68,7 +90,7 @@ function handleApiResponse(response) {
         return data;
     }
     else {
-        throw new errors_1.ApiError(`Failed to fetch data. NHTSA API responded with status: ${response.status}`, 500);
+        throw new errors_1.ApiError(`Failed to fetch data. NHTSA API responded with: ${response}`, 500);
     }
 }
 exports.default = router;

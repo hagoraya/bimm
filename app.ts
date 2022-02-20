@@ -28,11 +28,3 @@ app.listen(PORT, () => {
 });
 
 export default redisClient;
-
-// (async () => {
-//   // const client = redis.createClient({ url: process.env.REDIS_URL });
-//   // client.on('error', (err) => console.log('Redis Client Error', err));
-
-//   // await client.connect();
-
-// })();
