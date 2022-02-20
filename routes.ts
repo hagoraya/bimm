@@ -4,7 +4,6 @@ import xml2js from "xml-js";
 
 import { ApiError } from "./errors";
 import { AllMakesResponse, VehicleTypesForMakeIdsResp } from "./types";
-import redisClient from "./app";
 
 const AllMakesUrl =
   "https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=XML";
