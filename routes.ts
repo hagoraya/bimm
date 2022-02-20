@@ -23,9 +23,13 @@ router.get('/', async (req, res) => {
     //Check if Makes data exists in redis
     let cachedData = await redisClient.LRANGE('VehicalData', 0, -1);
     console.log('cachedData', cachedData);
-    if (cachedData.length > 0) {
-      res.status(200).send(cachedData);
-
+    if (cachedData.length) {
+      const jsonData = cachedData.map((data) => {
+        const obj = JSON.parse(data);
+        const keys = Object.keys(obj);
+        return obj[keys[0]];
+      });
+      res.status(200).send(jsonData);
       return;
     }
 
@@ -51,8 +55,13 @@ router.get('/', async (req, res) => {
     await redisClient.RPUSH('VehicalData', redisData);
 
     const dataInRedis = await redisClient.LRANGE('VehicalData', 0, -1);
-    //const allVehiclasTypes = await Promise.all(promises);
-    res.status(200).send(dataInRedis);
+    const jsonData = dataInRedis.map((data) => {
+      const obj = JSON.parse(data);
+      const keys = Object.keys(obj);
+      return obj[keys[0]];
+    });
+
+    res.status(200).send(jsonData);
   } catch (error) {
     console.log('Error: ', error);
     res.status(error.statusCode).send(error.message);

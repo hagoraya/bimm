@@ -25,8 +25,13 @@ router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         //Check if Makes data exists in redis
         let cachedData = yield app_1.default.LRANGE('VehicalData', 0, -1);
         console.log('cachedData', cachedData);
-        if (cachedData.length > 0) {
-            res.status(200).send(cachedData);
+        if (cachedData.length) {
+            const jsonData = cachedData.map((data) => {
+                const obj = JSON.parse(data);
+                const keys = Object.keys(obj);
+                return obj[keys[0]];
+            });
+            res.status(200).send(jsonData);
             return;
         }
         const allMakesData = yield getAllMakes();
@@ -46,8 +51,12 @@ router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         console.log(redisData);
         yield app_1.default.RPUSH('VehicalData', redisData);
         const dataInRedis = yield app_1.default.LRANGE('VehicalData', 0, -1);
-        //const allVehiclasTypes = await Promise.all(promises);
-        res.status(200).send(dataInRedis);
+        const jsonData = dataInRedis.map((data) => {
+            const obj = JSON.parse(data);
+            const keys = Object.keys(obj);
+            return obj[keys[0]];
+        });
+        res.status(200).send(jsonData);
     }
     catch (error) {
         console.log('Error: ', error);
