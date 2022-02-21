@@ -23,10 +23,10 @@ type VehicleTypeResp = {
 type MakeAndVehicle = {
   makeId: string;
   makeName: string;
-  vehicleTypes: [] | [vehicleType];
+  vehicleTypes: [] | [VehicleType];
 };
 
-type vehicleType = {
+type VehicleType = {
   typeId: string;
   typeName: string;
 };
@@ -36,4 +36,5 @@ export {
   VehicleTypesForMakeIdsResp,
   MakeAndVehicle,
   MakeIdModal,
+  VehicleType,
 };
