@@ -36,7 +36,7 @@ router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const promises = [];
         let resultsMap = new Map();
         normalizedMakesData.forEach((make) => {
-            if (resultsMap.size <= 5) {
+            if (resultsMap.size <= 500) {
                 resultsMap.set(make.makeId, make);
             }
         });
@@ -80,12 +80,14 @@ function GetVehiclesForMakeId(resultsMap) {
         const result = yield Promise.allSettled(Array.from(resultsMap, ([key, value]) => __awaiter(this, void 0, void 0, function* () {
             const cachedData = yield app_1.default.GET(key);
             if (cachedData) {
+                console.log(`Cached ${key}`);
                 const vehicleTypes = JSON.parse(cachedData).vehicleTypes;
                 return [
                     key,
                     (value = Object.assign(Object.assign({}, value), { vehicleTypes })),
                 ];
             }
+            console.log(`Fetching ${key}`);
             const vehicleTypeArray = yield fetchVehicleDetails(key);
             const normalizedVehicleTypes = vehicleTypeArray.map((vtype) => {
                 return {

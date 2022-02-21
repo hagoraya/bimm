@@ -39,7 +39,7 @@ router.get('/', async (req, res) => {
 
     let resultsMap = new Map();
     normalizedMakesData.forEach((make) => {
-      if (resultsMap.size <= 5) {
+      if (resultsMap.size <= 500) {
         resultsMap.set(make.makeId, make);
       }
     });
@@ -85,6 +85,7 @@ async function GetVehiclesForMakeId(resultsMap) {
     Array.from(resultsMap, async ([key, value]) => {
       const cachedData = await redisClient.GET(key);
       if (cachedData) {
+        console.log(`Cached ${key}`);
         const vehicleTypes = JSON.parse(cachedData).vehicleTypes;
         return [
           key,
@@ -94,6 +95,8 @@ async function GetVehiclesForMakeId(resultsMap) {
           }),
         ];
       }
+      console.log(`Fetching ${key}`);
+
       const vehicleTypeArray = await fetchVehicleDetails(key);
       const normalizedVehicleTypes = vehicleTypeArray.map((vtype) => {
         return {
