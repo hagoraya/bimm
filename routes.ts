@@ -22,7 +22,7 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     //Check if Makes data exists in redis
-    // let cachedData = await redisClient.LRANGE('VehicalData', 0, -1);
+    const makeIds = await redisClient.keys('*');
 
     const allMakesData = await getAllMakes();
 
@@ -35,8 +35,6 @@ router.get('/', async (req, res) => {
       return make_vehicale;
     });
 
-    console.log('Size of all Makes: ', normalizedMakesData.length);
-
     const promises = [];
 
     let resultsMap = new Map();
@@ -44,17 +42,7 @@ router.get('/', async (req, res) => {
       if (resultsMap.size <= 5) {
         resultsMap.set(make.makeId, make);
       }
-      //redisData.push(JSON.stringify({ [make.makeId]: make }));
     });
-    //await redisClient.RPUSH('VehicalData', redisData);
-
-    //const dataInRedis = await redisClient.LRANGE('VehicalData', 0, -1);
-    // const jsonData = dataInRedis.map((data) => {
-    //   const obj = JSON.parse(data);
-    //   const keys = Object.keys(obj);
-    //   return obj[keys[0]];
-    // });
-
     const results = await GetVehiclesForMakeId(resultsMap);
     const realMap = new Map();
     const cacheArray = [];
@@ -67,18 +55,15 @@ router.get('/', async (req, res) => {
       }
     });
 
-    console.log(cacheArray);
     await redisClient.MSET(cacheArray, (err, reply) => {
-      console.log(' reply: ' + reply);
-      console.log(' err: ' + err);
+      if (err) {
+        res.status(500).send('Error saving data');
+      }
     });
 
     const cache = await redisClient.GET('440');
-    console.log(cache);
-
     res.status(200).send([...realMap.values()]);
   } catch (error) {
-    console.log('Error: ', error);
     res.status(error.statusCode).send(error.message);
   }
 });
@@ -98,6 +83,17 @@ async function getAllMakes(): Promise<AllMakesResponse> {
 async function GetVehiclesForMakeId(resultsMap) {
   const result = await Promise.allSettled(
     Array.from(resultsMap, async ([key, value]) => {
+      const cachedData = await redisClient.GET(key);
+      if (cachedData) {
+        const vehicleTypes = JSON.parse(cachedData).vehicleTypes;
+        return [
+          key,
+          (value = {
+            ...value,
+            vehicleTypes,
+          }),
+        ];
+      }
       const vehicleTypeArray = await fetchVehicleDetails(key);
       const normalizedVehicleTypes = vehicleTypeArray.map((vtype) => {
         return {

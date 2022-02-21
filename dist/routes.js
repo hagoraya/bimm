@@ -23,7 +23,7 @@ const router = express_1.default.Router();
 router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         //Check if Makes data exists in redis
-        // let cachedData = await redisClient.LRANGE('VehicalData', 0, -1);
+        const makeIds = yield app_1.default.keys('*');
         const allMakesData = yield getAllMakes();
         let normalizedMakesData = allMakesData.map((make) => {
             const make_vehicale = {
@@ -33,22 +33,13 @@ router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             };
             return make_vehicale;
         });
-        console.log('Size of all Makes: ', normalizedMakesData.length);
         const promises = [];
         let resultsMap = new Map();
         normalizedMakesData.forEach((make) => {
             if (resultsMap.size <= 5) {
                 resultsMap.set(make.makeId, make);
             }
-            //redisData.push(JSON.stringify({ [make.makeId]: make }));
         });
-        //await redisClient.RPUSH('VehicalData', redisData);
-        //const dataInRedis = await redisClient.LRANGE('VehicalData', 0, -1);
-        // const jsonData = dataInRedis.map((data) => {
-        //   const obj = JSON.parse(data);
-        //   const keys = Object.keys(obj);
-        //   return obj[keys[0]];
-        // });
         const results = yield GetVehiclesForMakeId(resultsMap);
         const realMap = new Map();
         const cacheArray = [];
@@ -59,10 +50,10 @@ router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 cacheArray.push(JSON.stringify(obj.value[1]));
             }
         });
-        console.log(cacheArray);
         yield app_1.default.MSET(cacheArray, (err, reply) => {
-            console.log(' reply: ' + reply);
-            console.log(' err: ' + err);
+            if (err) {
+                res.status(500).send('Error saving data');
+            }
         });
         const cache = yield app_1.default.GET('440');
         console.log(cache);
@@ -89,6 +80,15 @@ function getAllMakes() {
 function GetVehiclesForMakeId(resultsMap) {
     return __awaiter(this, void 0, void 0, function* () {
         const result = yield Promise.allSettled(Array.from(resultsMap, ([key, value]) => __awaiter(this, void 0, void 0, function* () {
+            const cachedData = yield app_1.default.GET(key);
+            if (cachedData) {
+                console.log('CACHED', key);
+                const vehicleTypes = JSON.parse(cachedData).vehicleTypes;
+                return [
+                    key,
+                    (value = Object.assign(Object.assign({}, value), { vehicleTypes })),
+                ];
+            }
             const vehicleTypeArray = yield fetchVehicleDetails(key);
             const normalizedVehicleTypes = vehicleTypeArray.map((vtype) => {
                 return {
