@@ -1,7 +1,7 @@
 import express from 'express';
 import axios, { AxiosResponse } from 'axios';
-import xml2js from 'xml-js';
-//import redisClient from './app';
+import xml2js, { js2xml } from 'xml-js';
+import redisClient from './app';
 
 import { ApiError } from './errors';
 import {
@@ -22,16 +22,7 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     //Check if Makes data exists in redis
-    //let cachedData = await redisClient.LRANGE('VehicalData', 0, -1);
-    // if (cachedData.length) {
-    //   const jsonData = cachedData.map((data) => {
-    //     const obj = JSON.parse(data);
-    //     const keys = Object.keys(obj);
-    //     return obj[keys[0]];
-    //   });
-    //   res.status(200).send(jsonData);
-    //   return;
-    // }
+    // let cachedData = await redisClient.LRANGE('VehicalData', 0, -1);
 
     const allMakesData = await getAllMakes();
 
@@ -66,11 +57,24 @@ router.get('/', async (req, res) => {
 
     const results = await GetVehiclesForMakeId(resultsMap);
     const realMap = new Map();
-    const normalizedResults = results.map((obj) => {
-      if (obj.status == 'fulfilled') {
+    const cacheArray = [];
+
+    const normalizedResults = results.forEach((obj) => {
+      if (obj.status === 'fulfilled') {
         realMap.set(obj.value[0], obj.value[1]);
+        cacheArray.push(obj.value[0]);
+        cacheArray.push(JSON.stringify(obj.value[1]));
       }
     });
+
+    console.log(cacheArray);
+    await redisClient.MSET(cacheArray, (err, reply) => {
+      console.log(' reply: ' + reply);
+      console.log(' err: ' + err);
+    });
+
+    const cache = await redisClient.GET('440');
+    console.log(cache);
 
     res.status(200).send([...realMap.values()]);
   } catch (error) {

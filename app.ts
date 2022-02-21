@@ -8,18 +8,18 @@ const REDIS_URL = process.env.REDIS_url || 'redis://redis-cache:6379';
 console.log(REDIS_URL);
 //Start Redis Connection
 
-// let redisClient = null;
-// const initRedisClient = async () => {
-//   redisClient = redis.createClient({ url: REDIS_URL });
-//   redisClient.on('error', (err) => {
-//     console.log('Redis Client Error', err);
-//   });
-//   await redisClient.connect();
-// };
+let redisClient = null;
+const initRedisClient = async () => {
+  redisClient = redis.createClient({ url: REDIS_URL });
+  redisClient.on('error', (err) => {
+    console.log('Redis Client Error', err);
+  });
+  await redisClient.connect();
+};
 
-// (async () => {
-//   initRedisClient();
-// })();
+(async () => {
+  initRedisClient();
+})();
 
 //Start Express Server
 app.use('/api', routes);
@@ -27,4 +27,4 @@ app.listen(PORT, () => {
   return console.log(`Server Started at http://localhost:${PORT}`);
 });
 
-//export default redisClient;
+export default redisClient;

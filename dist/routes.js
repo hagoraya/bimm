@@ -23,16 +23,7 @@ const router = express_1.default.Router();
 router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         //Check if Makes data exists in redis
-        let cachedData = yield app_1.default.LRANGE('VehicalData', 0, -1);
-        if (cachedData.length) {
-            const jsonData = cachedData.map((data) => {
-                const obj = JSON.parse(data);
-                const keys = Object.keys(obj);
-                return obj[keys[0]];
-            });
-            res.status(200).send(jsonData);
-            return;
-        }
+        // let cachedData = await redisClient.LRANGE('VehicalData', 0, -1);
         const allMakesData = yield getAllMakes();
         let normalizedMakesData = allMakesData.map((make) => {
             const make_vehicale = {
@@ -44,19 +35,38 @@ router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         });
         console.log('Size of all Makes: ', normalizedMakesData.length);
         const promises = [];
-        let redisData = [];
+        let resultsMap = new Map();
         normalizedMakesData.forEach((make) => {
-            promises.push(make.makeId);
-            redisData.push(JSON.stringify({ [make.makeId]: make }));
+            if (resultsMap.size <= 5) {
+                resultsMap.set(make.makeId, make);
+            }
+            //redisData.push(JSON.stringify({ [make.makeId]: make }));
         });
-        yield app_1.default.RPUSH('VehicalData', redisData);
-        const dataInRedis = yield app_1.default.LRANGE('VehicalData', 0, -1);
-        const jsonData = dataInRedis.map((data) => {
-            const obj = JSON.parse(data);
-            const keys = Object.keys(obj);
-            return obj[keys[0]];
+        //await redisClient.RPUSH('VehicalData', redisData);
+        //const dataInRedis = await redisClient.LRANGE('VehicalData', 0, -1);
+        // const jsonData = dataInRedis.map((data) => {
+        //   const obj = JSON.parse(data);
+        //   const keys = Object.keys(obj);
+        //   return obj[keys[0]];
+        // });
+        const results = yield GetVehiclesForMakeId(resultsMap);
+        const realMap = new Map();
+        const cacheArray = [];
+        const normalizedResults = results.forEach((obj) => {
+            if (obj.status === 'fulfilled') {
+                realMap.set(obj.value[0], obj.value[1]);
+                cacheArray.push(obj.value[0]);
+                cacheArray.push(JSON.stringify(obj.value[1]));
+            }
         });
-        res.status(200).send(jsonData);
+        console.log(cacheArray);
+        yield app_1.default.MSET(cacheArray, (err, reply) => {
+            console.log(' reply: ' + reply);
+            console.log(' err: ' + err);
+        });
+        const cache = yield app_1.default.GET('440');
+        console.log(cache);
+        res.status(200).send([...realMap.values()]);
     }
     catch (error) {
         console.log('Error: ', error);
@@ -76,18 +86,35 @@ function getAllMakes() {
         }
     });
 }
-function GetVehiclesForMakeId(makeId) {
+function GetVehiclesForMakeId(resultsMap) {
     return __awaiter(this, void 0, void 0, function* () {
-        console.log('Getting data for: ', makeId);
+        const result = yield Promise.allSettled(Array.from(resultsMap, ([key, value]) => __awaiter(this, void 0, void 0, function* () {
+            const vehicleTypeArray = yield fetchVehicleDetails(key);
+            const normalizedVehicleTypes = vehicleTypeArray.map((vtype) => {
+                return {
+                    typeId: vtype.VehicleTypeId._text,
+                    typeName: vtype.VehicleTypeName._text,
+                };
+            });
+            return [
+                key,
+                (value = Object.assign(Object.assign({}, value), { vehicleTypes: normalizedVehicleTypes })),
+            ];
+        })));
+        return result;
+    });
+}
+function fetchVehicleDetails(makeId) {
+    return __awaiter(this, void 0, void 0, function* () {
         const getVehiclesFromMakeIdUrl = `${VehicalTypesForMakeIdBaseUrl}/${makeId}?format=xml`;
         const getVehiclesResp = yield axios_1.default.get(getVehiclesFromMakeIdUrl);
         const data = handleApiResponse(getVehiclesResp);
-        try {
-            const jsonData = JSON.parse(data);
-            return jsonData.Response.Results.VehicleTypesForMakeIds;
+        const jsonData = JSON.parse(data).Response.Results.VehicleTypesForMakeIds;
+        if (Array.isArray(jsonData)) {
+            return jsonData;
         }
-        catch (error) {
-            throw new errors_1.ApiError('Failed to parse response data', 500);
+        else {
+            return [jsonData];
         }
     });
 }
