@@ -56,12 +56,10 @@ router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             }
         });
         const cache = yield app_1.default.GET('440');
-        console.log(cache);
         res.status(200).send([...realMap.values()]);
     }
     catch (error) {
-        console.log('Error: ', error);
-        res.status(error.statusCode).send(error.message);
+        res.status(error.statusCode || 500).send(error.message);
     }
 }));
 function getAllMakes() {
@@ -82,7 +80,6 @@ function GetVehiclesForMakeId(resultsMap) {
         const result = yield Promise.allSettled(Array.from(resultsMap, ([key, value]) => __awaiter(this, void 0, void 0, function* () {
             const cachedData = yield app_1.default.GET(key);
             if (cachedData) {
-                console.log('CACHED', key);
                 const vehicleTypes = JSON.parse(cachedData).vehicleTypes;
                 return [
                     key,

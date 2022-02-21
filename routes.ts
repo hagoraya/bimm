@@ -64,7 +64,7 @@ router.get('/', async (req, res) => {
     const cache = await redisClient.GET('440');
     res.status(200).send([...realMap.values()]);
   } catch (error) {
-    res.status(error.statusCode).send(error.message);
+    res.status(error.statusCode || 500).send(error.message);
   }
 });
 
