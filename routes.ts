@@ -65,8 +65,14 @@ router.get('/', async (req, res) => {
     // });
 
     const results = await GetVehiclesForMakeId(resultsMap);
-    //console.log(results);
-    res.status(200).send(results);
+    const realMap = new Map();
+    const normalizedResults = results.map((obj) => {
+      if (obj.status == 'fulfilled') {
+        realMap.set(obj.value[0], obj.value[1]);
+      }
+    });
+
+    res.status(200).send([...realMap.values()]);
   } catch (error) {
     console.log('Error: ', error);
     res.status(error.statusCode).send(error.message);
@@ -89,23 +95,12 @@ async function GetVehiclesForMakeId(resultsMap) {
   const result = await Promise.allSettled(
     Array.from(resultsMap, async ([key, value]) => {
       const vehicleTypeArray = await fetchVehicleDetails(key);
-      let normalizedVehicleTypes = null;
-
-      //Some response can return a single object instead for array of objects for VehicleTypesForMakeIds
-      if (!Array.isArray(vehicleTypeArray)) {
-        normalizedVehicleTypes = {
-          typeId: vehicleTypeArray.VehicleTypeId._text,
-          typeName: vehicleTypeArray.VehicleTypeName._text,
+      const normalizedVehicleTypes = vehicleTypeArray.map((vtype) => {
+        return {
+          typeId: vtype.VehicleTypeId._text,
+          typeName: vtype.VehicleTypeName._text,
         };
-      } else {
-        normalizedVehicleTypes = vehicleTypeArray.map((vtype) => {
-          return {
-            typeId: vtype.VehicleTypeId._text,
-            typeName: vtype.VehicleTypeName._text,
-          };
-        });
-      }
-
+      });
       return [
         key,
         (value = {
@@ -117,13 +112,6 @@ async function GetVehiclesForMakeId(resultsMap) {
   );
 
   return result;
-
-  // try {
-  //   const jsonData = JSON.parse(data);
-  //   return jsonData.Response.Results.VehicleTypesForMakeIds;
-  // } catch (error) {
-  //   throw new ApiError('Failed to parse response data', 500);
-  // }
 }
 
 async function fetchVehicleDetails(makeId) {
@@ -133,10 +121,11 @@ async function fetchVehicleDetails(makeId) {
   const data = handleApiResponse(getVehiclesResp);
 
   const jsonData = JSON.parse(data).Response.Results.VehicleTypesForMakeIds;
-  if (makeId == '444' || makeId == '445') {
-    console.log(makeId, jsonData);
+  if (Array.isArray(jsonData)) {
+    return jsonData;
+  } else {
+    return [jsonData];
   }
-  return jsonData;
 }
 
 function handleApiResponse(response: AxiosResponse) {
