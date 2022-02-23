@@ -1,5 +1,5 @@
 #Specify a base image
-FROM node:alpine
+FROM node:alpine as base
 
 #Specify a working directory
 WORKDIR /usr/app
@@ -15,8 +15,3 @@ COPY ./ ./
 
 #TS build command
 RUN npm run build
-
-WORKDIR ./dist
-
-RUN node app.js
-
