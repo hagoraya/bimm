@@ -7,12 +7,7 @@ services:
     ports:
       - 6379:6379
   server:
-    build:
-      context: ./
-      dockerfile: Dockerfile
-      target: base
-    volumes:
-      - .:/usr/app
+    build: .
     container_name: bimm-server
     environment:
       - REDI_URL=redis://redis-cache

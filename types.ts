@@ -31,11 +31,4 @@ type VehicleType = {
   typeName: string;
 };
 
-export {
-  AllMakesResponse,
-  VehicleTypesForMakeIdsResp,
-  MakeAndVehicle,
-  MakeIdModal,
-  MakeId,
-  VehicleType,
-};
+export { AllMakesResponse, MakeAndVehicle, MakeIdModal, MakeId, VehicleType };
