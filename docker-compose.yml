@@ -10,8 +10,9 @@ services:
       - .:/usr/app
     container_name: bimm-server
     environment:
-      - REDI_URL=redis://redis-cache
+      - REDIS_URL=redis://redis-cache
       - PORT=4000
+      - LIMIT_API_TO=5
     ports:
       - '4000:4000'
     command: npm run start

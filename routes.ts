@@ -1,6 +1,6 @@
 import express from 'express';
 import axios, { AxiosResponse } from 'axios';
-import xml2js, { js2xml } from 'xml-js';
+import xml2js from 'xml-js';
 import redisClient from './app';
 
 import { ApiError } from './errors';
@@ -10,6 +10,8 @@ const AllMakesUrl =
   'https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=XML';
 const VehicalTypesForMakeIdBaseUrl =
   'https://vpic.nhtsa.dot.gov/api/vehicles/GetVehicleTypesForMakeId';
+
+const LIMIT_API_TO = process.env.LIMIT_API_TO || 500;
 
 const router = express.Router();
 
@@ -30,7 +32,7 @@ router.get('/', async (req, res) => {
 
     let resultsMap: Map<MakeId, MakeAndVehicle> = new Map();
     normalizedMakesData.forEach((make) => {
-      if (resultsMap.size <= 5) {
+      if (resultsMap.size <= LIMIT_API_TO) {
         resultsMap.set(make.makeId, make);
       }
     });

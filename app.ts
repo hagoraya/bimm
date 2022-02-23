@@ -4,7 +4,7 @@ import * as redis from 'redis';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-const REDIS_URL = process.env.REDIS_url || 'redis://redis-cache:6379';
+const REDIS_URL = process.env.REDIS_URL || 'redis://redis-cache:6379';
 
 console.log(REDIS_URL);
 
