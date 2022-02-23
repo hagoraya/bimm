@@ -22,8 +22,6 @@ const VehicalTypesForMakeIdBaseUrl = 'https://vpic.nhtsa.dot.gov/api/vehicles/Ge
 const router = express_1.default.Router();
 router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        //Check if Makes data exists in redis
-        const makeIds = yield app_1.default.keys('*');
         const allMakesData = yield getAllMakes();
         let normalizedMakesData = allMakesData.map((make) => {
             const make_vehicale = {
@@ -33,30 +31,29 @@ router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             };
             return make_vehicale;
         });
-        const promises = [];
         let resultsMap = new Map();
         normalizedMakesData.forEach((make) => {
-            if (resultsMap.size <= 500) {
+            if (resultsMap.size <= 5) {
                 resultsMap.set(make.makeId, make);
             }
         });
-        const results = yield GetVehiclesForMakeId(resultsMap);
-        const realMap = new Map();
+        const vehicalsData = yield GetVehiclesForMakeId(resultsMap);
         const cacheArray = [];
-        const normalizedResults = results.forEach((obj) => {
+        const responseMap = new Map();
+        vehicalsData.forEach((obj) => {
             if (obj.status === 'fulfilled') {
-                realMap.set(obj.value[0], obj.value[1]);
+                responseMap.set(obj.value[0], obj.value[1]);
                 cacheArray.push(obj.value[0]);
                 cacheArray.push(JSON.stringify(obj.value[1]));
             }
         });
-        yield app_1.default.MSET(cacheArray, (err, reply) => {
+        yield app_1.default.MSET(cacheArray, (err) => {
             if (err) {
                 res.status(500).send('Error saving data');
             }
         });
         const cache = yield app_1.default.GET('440');
-        res.status(200).send([...realMap.values()]);
+        res.status(200).send([...responseMap.values()]);
     }
     catch (error) {
         res.status(error.statusCode || 500).send(error.message);
@@ -80,14 +77,12 @@ function GetVehiclesForMakeId(resultsMap) {
         const result = yield Promise.allSettled(Array.from(resultsMap, ([key, value]) => __awaiter(this, void 0, void 0, function* () {
             const cachedData = yield app_1.default.GET(key);
             if (cachedData) {
-                console.log(`Cached ${key}`);
                 const vehicleTypes = JSON.parse(cachedData).vehicleTypes;
                 return [
                     key,
                     (value = Object.assign(Object.assign({}, value), { vehicleTypes })),
                 ];
             }
-            console.log(`Fetching ${key}`);
             const vehicleTypeArray = yield fetchVehicleDetails(key);
             const normalizedVehicleTypes = vehicleTypeArray.map((vtype) => {
                 return {

@@ -4,13 +4,7 @@ import xml2js, { js2xml } from 'xml-js';
 import redisClient from './app';
 
 import { ApiError } from './errors';
-import {
-  AllMakesResponse,
-  VehicleTypesForMakeIdsResp,
-  MakeAndVehicle,
-  MakeIdModal,
-  VehicleType,
-} from './types';
+import { AllMakesResponse, MakeAndVehicle, MakeIdModal, MakeId } from './types';
 
 const AllMakesUrl =
   'https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=XML';
@@ -21,48 +15,46 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
   try {
-    //Check if Makes data exists in redis
-    const makeIds = await redisClient.keys('*');
+    const allMakesData: MakeIdModal[] = await getAllMakes();
 
-    const allMakesData = await getAllMakes();
+    let normalizedMakesData: MakeAndVehicle[] = allMakesData.map(
+      (make: MakeIdModal) => {
+        const make_vehicale: MakeAndVehicle = {
+          makeId: make.Make_ID._text,
+          makeName: make.Make_Name._text,
+          vehicleTypes: [],
+        };
+        return make_vehicale;
+      }
+    );
 
-    let normalizedMakesData = allMakesData.map((make: MakeIdModal) => {
-      const make_vehicale: MakeAndVehicle = {
-        makeId: make.Make_ID._text,
-        makeName: make.Make_Name._text,
-        vehicleTypes: [],
-      };
-      return make_vehicale;
-    });
-
-    const promises = [];
-
-    let resultsMap = new Map();
+    let resultsMap: Map<MakeId, MakeAndVehicle> = new Map();
     normalizedMakesData.forEach((make) => {
-      if (resultsMap.size <= 500) {
+      if (resultsMap.size <= 5) {
         resultsMap.set(make.makeId, make);
       }
     });
-    const results = await GetVehiclesForMakeId(resultsMap);
-    const realMap = new Map();
-    const cacheArray = [];
+    const vehicalsData = await GetVehiclesForMakeId(resultsMap);
 
-    const normalizedResults = results.forEach((obj) => {
+    const cacheArray = [];
+    const responseMap = new Map();
+
+    vehicalsData.forEach((obj) => {
       if (obj.status === 'fulfilled') {
-        realMap.set(obj.value[0], obj.value[1]);
+        responseMap.set(obj.value[0], obj.value[1]);
         cacheArray.push(obj.value[0]);
         cacheArray.push(JSON.stringify(obj.value[1]));
       }
     });
 
-    await redisClient.MSET(cacheArray, (err, reply) => {
+    await redisClient.MSET(cacheArray, (err) => {
       if (err) {
         res.status(500).send('Error saving data');
       }
     });
 
     const cache = await redisClient.GET('440');
-    res.status(200).send([...realMap.values()]);
+    res.status(200).send([...responseMap.values()]);
   } catch (error) {
     res.status(error.statusCode || 500).send(error.message);
   }
@@ -85,7 +77,6 @@ async function GetVehiclesForMakeId(resultsMap) {
     Array.from(resultsMap, async ([key, value]) => {
       const cachedData = await redisClient.GET(key);
       if (cachedData) {
-        console.log(`Cached ${key}`);
         const vehicleTypes = JSON.parse(cachedData).vehicleTypes;
         return [
           key,
@@ -95,8 +86,6 @@ async function GetVehiclesForMakeId(resultsMap) {
           }),
         ];
       }
-      console.log(`Fetching ${key}`);
-
       const vehicleTypeArray = await fetchVehicleDetails(key);
       const normalizedVehicleTypes = vehicleTypeArray.map((vtype) => {
         return {

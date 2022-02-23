@@ -9,7 +9,7 @@ type MakeIdModal = {
   };
 };
 
-type VehicleTypesForMakeIdsResp = [VehicleTypeResp];
+type MakeId = String;
 
 type VehicleTypeResp = {
   VehicleTypeId: {
@@ -36,5 +36,6 @@ export {
   VehicleTypesForMakeIdsResp,
   MakeAndVehicle,
   MakeIdModal,
+  MakeId,
   VehicleType,
 };

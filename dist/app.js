@@ -38,7 +38,7 @@ const app = (0, express_1.default)();
 const PORT = process.env.PORT || 4000;
 const REDIS_URL = process.env.REDIS_url || 'redis://redis-cache:6379';
 console.log(REDIS_URL);
-//Start Redis Connection
+//Redis Connection
 let redisClient = null;
 const initRedisClient = () => __awaiter(void 0, void 0, void 0, function* () {
     redisClient = redis.createClient({ url: REDIS_URL });
