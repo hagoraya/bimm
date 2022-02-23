@@ -5,13 +5,13 @@ FROM node:alpine as base
 WORKDIR /usr/app
 
 #Copy the dependencies file
-COPY ./package*.json ./
+COPY package*.json .
 
 #Install dependencies
-RUN npm install 
+RUN npm install
 
-#Copy remaining files
-COPY ./ ./
+#Copy files
+COPY . .
 
-#TS build command
+#Run ts build command
 RUN npm run build
